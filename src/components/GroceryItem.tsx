@@ -22,7 +22,7 @@ const GroceryItem: React.FC<GroceryItemProps> = ({
     <View className="mb-4 p-4 bg-gray-100 rounded-lg shadow-md">
       <Pressable
         onPress={() => onToggleBought(id)}
-        className="flex-row items-center"
+        style={{ flexDirection: "column", padding: 10 }}
       >
         <Text
           style={[
@@ -32,11 +32,20 @@ const GroceryItem: React.FC<GroceryItemProps> = ({
         >
           {name}
         </Text>
+        <Text style={styles.quantityText}>Số lượng: {quantity}</Text>
+        <Text style={styles.categoryText}>
+          Danh mục: {category || "Không có"}
+        </Text>
+
+        <Text
+          style={[
+            styles.statusText,
+            bought === 1 ? styles.boughtStatusText : styles.notBoughtStatusText,
+          ]}
+        >
+          {bought === 1 ? "Đã mua" : "Chưa mua"}
+        </Text>
       </Pressable>
-      <Text style={styles.quantityText}>Số lượng: {quantity}</Text>
-      <Text style={styles.categoryText}>
-        Danh mục: {category || "Không có"}
-      </Text>
     </View>
   );
 };
@@ -58,6 +67,17 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     color: "#777",
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 5,
+  },
+  boughtStatusText: {
+    color: "green",
+  },
+  notBoughtStatusText: {
+    color: "red",
   },
 });
 
