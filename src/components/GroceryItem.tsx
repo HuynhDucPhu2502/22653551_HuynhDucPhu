@@ -17,9 +17,8 @@ const GroceryItem: React.FC<GroceryItemProps> = ({
 }) => {
   return (
     <Card style={styles.card}>
+      <Card.Title title={name} subtitle={`Số lượng: ${quantity}`} />
       <Card.Content>
-        <Title style={styles.title}>{name}</Title>
-        <Paragraph style={styles.paragraph}>Số lượng: {quantity}</Paragraph>
         <Paragraph style={styles.paragraph}>
           Danh mục: {category || "Không có"}
         </Paragraph>
@@ -38,13 +37,9 @@ const styles = StyleSheet.create({
     elevation: 5,
     backgroundColor: "#f9f9f9",
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-  },
   paragraph: {
     color: "#555",
+    marginBottom: 5,
   },
   bought: {
     color: "green",
