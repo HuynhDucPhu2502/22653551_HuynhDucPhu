@@ -76,6 +76,11 @@ const Page = () => {
     setCurrentItem(null);
   };
 
+  const handleDeleteItem = async (id: number) => {
+    await db.runAsync(`DELETE FROM grocery_items WHERE id = ?`, [id]);
+    fetchData(); // Refresh danh sách sau khi xóa
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       fetchData();
@@ -112,7 +117,8 @@ const Page = () => {
               category={item.category}
               bought={item.bought}
               onToggleBought={handleToggleBought}
-              onEdit={handleEditItem} // Thêm nút sửa cho mỗi item
+              onEdit={handleEditItem}
+              onDelete={handleDeleteItem} // Thêm hàm xóa cho mỗi item
             />
           )}
         />

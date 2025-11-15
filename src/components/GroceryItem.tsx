@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, Button, StyleSheet } from "react-native";
+import { View, Text, Pressable, Button, StyleSheet, Alert } from "react-native";
 
 type GroceryItemProps = {
   id: number;
@@ -9,6 +9,7 @@ type GroceryItemProps = {
   bought: number;
   onToggleBought: (id: number) => void;
   onEdit: (id: number) => void; // Callback để sửa món
+  onDelete: (id: number) => void; // Callback để xóa món
 };
 
 const GroceryItem: React.FC<GroceryItemProps> = ({
@@ -19,11 +20,24 @@ const GroceryItem: React.FC<GroceryItemProps> = ({
   bought,
   onToggleBought,
   onEdit,
+  onDelete,
 }) => {
+  const handleDelete = () => {
+    Alert.alert(
+      "Xác nhận xóa",
+      "Bạn có chắc chắn muốn xóa món này không?",
+      [
+        { text: "Hủy", style: "cancel" },
+        { text: "Xóa", onPress: () => onDelete(id) },
+      ],
+      { cancelable: false }
+    );
+  };
+
   return (
     <View className="mb-4 p-4 bg-gray-100 rounded-lg shadow-md">
       <Pressable
-        onPress={() => onToggleBought(id)} // Toggle trạng thái mua khi bấm vào toàn bộ item
+        onPress={() => onToggleBought(id)} // Toggle trạng thái khi bấm vào item
         style={styles.itemTextContainer}
       >
         <Text
@@ -40,16 +54,8 @@ const GroceryItem: React.FC<GroceryItemProps> = ({
         Danh mục: {category || "Không có"}
       </Text>
 
-      <Text
-        style={[
-          styles.statusText,
-          bought === 1 ? styles.boughtStatus : styles.notBoughtStatus,
-        ]}
-      >
-        {bought === 1 ? "Đã mua" : "Chưa mua"}
-      </Text>
-
       <Button title="Sửa" onPress={() => onEdit(id)} color="blue" />
+      <Button title="Xóa" onPress={handleDelete} color="red" />
     </View>
   );
 };
@@ -71,17 +77,6 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     color: "#777",
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 5,
-  },
-  boughtStatus: {
-    color: "green",
-  },
-  notBoughtStatus: {
-    color: "red",
   },
   itemTextContainer: {
     flexDirection: "row",
