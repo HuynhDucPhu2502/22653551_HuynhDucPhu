@@ -1,7 +1,6 @@
 import { SQLiteDatabase } from "expo-sqlite";
 
 export const initTable = async (db: SQLiteDatabase) => {
-  // Tạo bảng nếu chưa có
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS grocery_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
