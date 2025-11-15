@@ -1,26 +1,40 @@
-import React, { useState, useMemo, useCallback } from "react";
-import { View, FlatList, Text, StyleSheet, TextInput } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  FlatList,
+  Text,
+  StyleSheet,
+  Button,
+  ActivityIndicator,
+  TextInput,
+  Modal,
+} from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
 import { FAB } from "react-native-paper";
 import AddItemModal from "@/components/AddItemModal";
 import GroceryItem from "@/components/GroceryItem";
 import EditItemModal from "@/components/EditItemModal";
-import { useFocusEffect } from "expo-router";
 
 const Page = () => {
   const [groceryItems, setGroceryItems] = useState([]);
-  const [filteredItems, setFilteredItems] = useState([]);
-  const [searchTerm, setSearchTerm] = useState(""); // State for search term
   const [isModalVisible, setModalVisible] = useState(false);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
-  const [currentItem, setCurrentItem] = useState(null); // Dùng để lưu item đang được sửa
+  const [currentItem, setCurrentItem] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(""); // State để lưu thông báo lỗi
+  const [url, setUrl] = useState(""); // State để lưu URL người dùng nhập vào
+  const [importModalVisible, setImportModalVisible] = useState(false); // Modal cho nhập URL API
   const db = useSQLiteContext();
 
+  // Fetch data từ SQLite khi load
   const fetchData = async () => {
     const result = await db.getAllAsync("SELECT * FROM grocery_items");
-    setGroceryItems(result);
-    setFilteredItems(result); // Initialize filteredItems with all items
+    setGroceryItems(result); // Cập nhật danh sách món hàng từ SQLite
   };
+
+  useEffect(() => {
+    fetchData(); // Gọi khi component load lần đầu
+  }, []);
 
   const handleAddItem = async (
     name: string,
@@ -79,34 +93,46 @@ const Page = () => {
     setCurrentItem(null);
   };
 
-  // Handle real-time search
-  const handleSearch = useCallback(
-    (searchTerm: string) => {
-      setSearchTerm(searchTerm);
-      if (!searchTerm) {
-        setFilteredItems(groceryItems); // Nếu không có tìm kiếm, hiển thị toàn bộ danh sách
-      } else {
-        const filtered = groceryItems.filter((item) =>
-          item.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setFilteredItems(filtered); // Lọc danh sách theo tên
-      }
-    },
-    [groceryItems]
-  );
-
-  // UseMemo for optimized search performance
-  const filteredData = useMemo(() => filteredItems, [filteredItems]);
   const handleDeleteItem = async (id: number) => {
     await db.runAsync(`DELETE FROM grocery_items WHERE id = ?`, [id]);
-    fetchData();
+    fetchData(); // Refresh danh sách sau khi xóa
   };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchData();
-    }, [])
-  );
+  // Hàm Import từ API
+  const handleImportFromAPI = async () => {
+    setLoading(true);
+    setError(""); // Reset lỗi trước khi gọi API
+
+    try {
+      const response = await fetch(url); // Lấy URL người dùng nhập vào
+      if (!response.ok) {
+        throw new Error("Lỗi khi tải dữ liệu");
+      }
+      const data = await response.json();
+
+      // Lọc và thêm dữ liệu từ API vào SQLite
+      for (const item of data) {
+        const { name, quantity, category, completed } = item;
+        const bought = completed ? 1 : 0;
+
+        // Kiểm tra nếu item đã có trong cơ sở dữ liệu
+        const existingItem = groceryItems.find((i) => i.name === name);
+        if (!existingItem) {
+          await db.runAsync(
+            `INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, ?, ?)`,
+            [name, quantity, category, bought, Date.now()]
+          );
+        }
+      }
+
+      fetchData(); // Refresh danh sách sau khi import
+      setImportModalVisible(false); // Đóng modal sau khi hoàn tất
+    } catch (err) {
+      setError("Không thể tải dữ liệu từ API.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -122,21 +148,51 @@ const Page = () => {
         onSave={handleSaveEditItem}
       />
 
-      {/* Search bar */}
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Tìm kiếm món hàng"
-        value={searchTerm}
-        onChangeText={handleSearch} // Gọi hàm lọc khi gõ vào search
+      {/* Nút Import từ API */}
+      <Button
+        title="Import từ API"
+        onPress={() => setImportModalVisible(true)}
       />
 
-      {filteredData.length === 0 ? (
+      {/* Modal nhập URL API */}
+      <Modal
+        visible={importModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setImportModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Nhập URL API</Text>
+            <TextInput
+              style={styles.input}
+              value={url}
+              onChangeText={setUrl}
+              placeholder="Nhập URL API"
+            />
+            <Button title="Lưu" onPress={handleImportFromAPI} />
+            <Button
+              title="Hủy"
+              onPress={() => setImportModalVisible(false)}
+              color="red"
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Hiển thị loading khi đang fetch */}
+      {loading && <ActivityIndicator size="large" color="#6200ee" />}
+
+      {/* Hiển thị lỗi nếu fetch thất bại */}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      {groceryItems.length === 0 ? (
         <Text style={styles.emptyStateText}>
-          Không tìm thấy món nào phù hợp!
+          Danh sách trống, thêm món cần mua nhé!
         </Text>
       ) : (
         <FlatList
-          data={filteredData}
+          data={groceryItems}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <GroceryItem
@@ -147,7 +203,7 @@ const Page = () => {
               bought={item.bought}
               onToggleBought={handleToggleBought}
               onEdit={handleEditItem}
-              onDelete={handleDeleteItem}
+              onDelete={handleDeleteItem} // Truyền hàm xóa vào
             />
           )}
         />
@@ -168,17 +224,40 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  searchInput: {
-    padding: 10,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    fontSize: 16,
-  },
   emptyStateText: {
     textAlign: "center",
     fontSize: 18,
+  },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    width: 300,
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
   },
   fab: {
     position: "absolute",
