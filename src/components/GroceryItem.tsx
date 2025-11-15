@@ -8,7 +8,7 @@ type GroceryItemProps = {
   category?: string;
   bought: number;
   onToggleBought: (id: number) => void;
-  onEdit: (id: number) => void; // Callback để sửa món
+  onEdit: (id: number) => void;
   onDelete: (id: number) => void; // Callback để xóa món
 };
 
@@ -28,7 +28,7 @@ const GroceryItem: React.FC<GroceryItemProps> = ({
       "Bạn có chắc chắn muốn xóa món này không?",
       [
         { text: "Hủy", style: "cancel" },
-        { text: "Xóa", onPress: () => onDelete(id) },
+        { text: "Xóa", onPress: () => onDelete(id) }, // Gọi onDelete nếu đồng ý
       ],
       { cancelable: false }
     );
