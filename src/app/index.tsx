@@ -11,6 +11,11 @@ const Page = () => {
   const [isModalVisible, setModalVisible] = useState(false);
   const db = useSQLiteContext();
 
+  const fetchData = async () => {
+    const result = await db.getAllAsync("SELECT * FROM grocery_items");
+    setGroceryItems(result);
+  };
+
   const handleAddItem = async (
     name: string,
     quantity: string,
@@ -25,25 +30,33 @@ const Page = () => {
       `INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, ?, ?)`,
       [name, quantity, category, 0, Date.now()]
     );
-
-    const newItem = {
-      id: Date.now(),
-      name,
-      quantity,
-      category,
-      bought: 0,
-    };
-
-    setGroceryItems((prevItems) => [newItem, ...prevItems]);
+    fetchData();
     setModalVisible(false);
+  };
+
+  const handleToggleBought = async (id: number) => {
+    const itemIndex = groceryItems.findIndex((item) => item.id === id);
+    if (itemIndex === -1) return;
+
+    const newBoughtState = groceryItems[itemIndex].bought === 1 ? 0 : 1;
+
+    await db.runAsync(`UPDATE grocery_items SET bought = ? WHERE id = ?`, [
+      newBoughtState,
+      id,
+    ]);
+
+    setGroceryItems((prevItems) => {
+      const updatedItems = [...prevItems];
+      updatedItems[itemIndex] = {
+        ...updatedItems[itemIndex],
+        bought: newBoughtState,
+      };
+      return updatedItems;
+    });
   };
 
   useFocusEffect(
     React.useCallback(() => {
-      const fetchData = async () => {
-        const result = await db.getAllAsync("SELECT * FROM grocery_items");
-        setGroceryItems(result);
-      };
       fetchData();
     }, [])
   );
@@ -66,10 +79,12 @@ const Page = () => {
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <GroceryItem
+              id={item.id}
               name={item.name}
               quantity={item.quantity}
               category={item.category}
               bought={item.bought}
+              onToggleBought={handleToggleBought}
             />
           )}
         />

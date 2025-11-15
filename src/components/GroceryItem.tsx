@@ -1,53 +1,63 @@
 import React from "react";
-import { Card, Title, Paragraph } from "react-native-paper";
-import { StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 
 type GroceryItemProps = {
+  id: number;
   name: string;
   quantity: number;
   category?: string;
   bought: number;
+  onToggleBought: (id: number) => void;
 };
 
 const GroceryItem: React.FC<GroceryItemProps> = ({
+  id,
   name,
   quantity,
   category,
   bought,
+  onToggleBought,
 }) => {
   return (
-    <Card style={styles.card}>
-      <Card.Title title={name} subtitle={`Số lượng: ${quantity}`} />
-      <Card.Content>
-        <Paragraph style={styles.paragraph}>
-          Danh mục: {category || "Không có"}
-        </Paragraph>
-        <Paragraph style={bought === 1 ? styles.bought : styles.notBought}>
-          {bought === 1 ? "Đã mua" : "Chưa mua"}
-        </Paragraph>
-      </Card.Content>
-    </Card>
+    <View className="mb-4 p-4 bg-gray-100 rounded-lg shadow-md">
+      <Pressable
+        onPress={() => onToggleBought(id)}
+        className="flex-row items-center"
+      >
+        <Text
+          style={[
+            styles.itemText,
+            bought === 1 ? styles.boughtText : styles.notBoughtText,
+          ]}
+        >
+          {name}
+        </Text>
+      </Pressable>
+      <Text style={styles.quantityText}>Số lượng: {quantity}</Text>
+      <Text style={styles.categoryText}>
+        Danh mục: {category || "Không có"}
+      </Text>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    marginBottom: 10,
-    borderRadius: 8,
-    elevation: 5,
-    backgroundColor: "#f9f9f9",
+  itemText: {
+    fontSize: 18,
+    fontWeight: "500",
   },
-  paragraph: {
-    color: "#555",
-    marginBottom: 5,
-  },
-  bought: {
+  boughtText: {
+    textDecorationLine: "line-through",
     color: "green",
-    fontWeight: "bold",
   },
-  notBought: {
-    color: "red",
-    fontWeight: "bold",
+  notBoughtText: {
+    color: "black",
+  },
+  quantityText: {
+    color: "#555",
+  },
+  categoryText: {
+    color: "#777",
   },
 });
 
