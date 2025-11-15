@@ -1,63 +1,63 @@
-import React, { useState } from "react";
-import {
-  Modal,
-  View,
-  TextInput,
-  Button,
-  StyleSheet,
-  Text,
-  Alert,
-} from "react-native";
+import React, { useState, useEffect } from "react";
+import { Modal, View, TextInput, Button, StyleSheet, Text } from "react-native";
 
-type AddItemModalProps = {
+type EditItemModalProps = {
   visible: boolean;
   onClose: () => void;
-  onAddItem: (name: string, quantity: string, category: string) => void;
+  onSave: (name: string, quantity: string, category: string) => void;
+  item: { id: number; name: string; quantity: number; category: string } | null; // Kiểm tra nếu item là null
 };
 
-const AddItemModal: React.FC<AddItemModalProps> = ({
+const EditItemModal: React.FC<EditItemModalProps> = ({
   visible,
   onClose,
-  onAddItem,
+  onSave,
+  item,
 }) => {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [category, setCategory] = useState("");
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      Alert.alert("Lỗi", "Tên món không được để trống", [{ text: "OK" }]);
-      return;
+  useEffect(() => {
+    if (item) {
+      setName(item.name);
+      setQuantity(item.quantity.toString());
+      setCategory(item.category);
     }
-    onAddItem(name, quantity, category);
-    setName("");
-    setQuantity("1");
-    setCategory("");
+  }, [item]);
+
+  const handleSave = () => {
+    if (item) {
+      onSave(name, quantity, category);
+      onClose();
+    }
   };
+
+  if (!item) return null; // Nếu item là null, không render modal
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Thêm món mới</Text>
+          <Text style={styles.modalTitle}>Chỉnh sửa món</Text>
           <TextInput
             style={styles.input}
-            placeholder="Tên món (bắt buộc)"
             value={name}
             onChangeText={setName}
+            placeholder="Tên món"
           />
           <TextInput
             style={styles.input}
-            placeholder="Số lượng"
             value={quantity}
             onChangeText={setQuantity}
+            placeholder="Số lượng"
             keyboardType="numeric"
           />
           <TextInput
             style={styles.input}
-            placeholder="Danh mục (tùy chọn)"
             value={category}
             onChangeText={setCategory}
+            placeholder="Danh mục"
           />
           <Button title="Lưu" onPress={handleSave} />
           <Button title="Hủy" onPress={onClose} color="red" />
@@ -96,4 +96,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AddItemModal;
+export default EditItemModal;

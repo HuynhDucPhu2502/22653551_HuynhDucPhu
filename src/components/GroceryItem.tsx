@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, Button, StyleSheet } from "react-native";
 
 type GroceryItemProps = {
   id: number;
@@ -8,6 +8,7 @@ type GroceryItemProps = {
   category?: string;
   bought: number;
   onToggleBought: (id: number) => void;
+  onEdit: (id: number) => void; // Callback để sửa món
 };
 
 const GroceryItem: React.FC<GroceryItemProps> = ({
@@ -17,12 +18,13 @@ const GroceryItem: React.FC<GroceryItemProps> = ({
   category,
   bought,
   onToggleBought,
+  onEdit,
 }) => {
   return (
     <View className="mb-4 p-4 bg-gray-100 rounded-lg shadow-md">
       <Pressable
-        onPress={() => onToggleBought(id)}
-        style={{ flexDirection: "column", padding: 10 }}
+        onPress={() => onToggleBought(id)} // Toggle trạng thái mua khi bấm vào toàn bộ item
+        style={styles.itemTextContainer}
       >
         <Text
           style={[
@@ -32,20 +34,22 @@ const GroceryItem: React.FC<GroceryItemProps> = ({
         >
           {name}
         </Text>
-        <Text style={styles.quantityText}>Số lượng: {quantity}</Text>
-        <Text style={styles.categoryText}>
-          Danh mục: {category || "Không có"}
-        </Text>
-
-        <Text
-          style={[
-            styles.statusText,
-            bought === 1 ? styles.boughtStatusText : styles.notBoughtStatusText,
-          ]}
-        >
-          {bought === 1 ? "Đã mua" : "Chưa mua"}
-        </Text>
       </Pressable>
+      <Text style={styles.quantityText}>Số lượng: {quantity}</Text>
+      <Text style={styles.categoryText}>
+        Danh mục: {category || "Không có"}
+      </Text>
+
+      <Text
+        style={[
+          styles.statusText,
+          bought === 1 ? styles.boughtStatus : styles.notBoughtStatus,
+        ]}
+      >
+        {bought === 1 ? "Đã mua" : "Chưa mua"}
+      </Text>
+
+      <Button title="Sửa" onPress={() => onEdit(id)} color="blue" />
     </View>
   );
 };
@@ -73,11 +77,15 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginTop: 5,
   },
-  boughtStatusText: {
+  boughtStatus: {
     color: "green",
   },
-  notBoughtStatusText: {
+  notBoughtStatus: {
     color: "red",
+  },
+  itemTextContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
 });
 

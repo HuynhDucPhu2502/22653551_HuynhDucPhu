@@ -5,10 +5,13 @@ import { useFocusEffect } from "@react-navigation/native";
 import { FAB } from "react-native-paper";
 import AddItemModal from "@/components/AddItemModal";
 import GroceryItem from "@/components/GroceryItem";
+import EditItemModal from "@/components/EditItemModal";
 
 const Page = () => {
   const [groceryItems, setGroceryItems] = useState([]);
   const [isModalVisible, setModalVisible] = useState(false);
+  const [isEditModalVisible, setEditModalVisible] = useState(false);
+  const [currentItem, setCurrentItem] = useState(null); // Dùng để lưu item đang được sửa
   const db = useSQLiteContext();
 
   const fetchData = async () => {
@@ -35,24 +38,42 @@ const Page = () => {
   };
 
   const handleToggleBought = async (id: number) => {
-    const itemIndex = groceryItems.findIndex((item) => item.id === id);
-    if (itemIndex === -1) return;
+    const item = groceryItems.find((item) => item.id === id);
+    if (!item) return;
 
-    const newBoughtState = groceryItems[itemIndex].bought === 1 ? 0 : 1;
-
+    const newBoughtState = item.bought === 1 ? 0 : 1;
     await db.runAsync(`UPDATE grocery_items SET bought = ? WHERE id = ?`, [
       newBoughtState,
       id,
     ]);
+    fetchData();
+  };
 
-    setGroceryItems((prevItems) => {
-      const updatedItems = [...prevItems];
-      updatedItems[itemIndex] = {
-        ...updatedItems[itemIndex],
-        bought: newBoughtState,
-      };
-      return updatedItems;
-    });
+  const handleEditItem = (id: number) => {
+    const item = groceryItems.find((item) => item.id === id);
+    if (item) {
+      setCurrentItem(item);
+      setEditModalVisible(true);
+    }
+  };
+
+  const handleSaveEditItem = async (
+    name: string,
+    quantity: string,
+    category: string
+  ) => {
+    if (!name.trim()) {
+      alert("Tên món không được để trống");
+      return;
+    }
+
+    await db.runAsync(
+      `UPDATE grocery_items SET name = ?, quantity = ?, category = ? WHERE id = ?`,
+      [name, quantity, category, currentItem.id]
+    );
+    fetchData();
+    setEditModalVisible(false);
+    setCurrentItem(null);
   };
 
   useFocusEffect(
@@ -67,6 +88,12 @@ const Page = () => {
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
         onAddItem={handleAddItem}
+      />
+      <EditItemModal
+        visible={isEditModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        item={currentItem}
+        onSave={handleSaveEditItem}
       />
 
       {groceryItems.length === 0 ? (
@@ -85,6 +112,7 @@ const Page = () => {
               category={item.category}
               bought={item.bought}
               onToggleBought={handleToggleBought}
+              onEdit={handleEditItem} // Thêm nút sửa cho mỗi item
             />
           )}
         />
