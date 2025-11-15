@@ -7,7 +7,7 @@ import { initTable } from "@/db";
 export default function Layout() {
   return (
     <SQLiteProvider
-      databaseName="HuynhDucPhu_22653551.db"
+      databaseName="HuynhDucPhu_22653551_2.db"
       onInit={(db) => initTable(db)}
     >
       <SafeAreaProvider>

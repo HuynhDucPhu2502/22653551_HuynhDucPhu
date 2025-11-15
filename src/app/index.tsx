@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   FlatList,
@@ -6,64 +6,40 @@ import {
   StyleSheet,
   Button,
   ActivityIndicator,
-  TextInput,
   Modal,
+  TextInput,
 } from "react-native";
-import { useSQLiteContext } from "expo-sqlite";
 import { FAB } from "react-native-paper";
 import AddItemModal from "@/components/AddItemModal";
 import GroceryItem from "@/components/GroceryItem";
 import EditItemModal from "@/components/EditItemModal";
+import useGroceryItems from "./hooks/useGroceryItems";
 
 const Page = () => {
-  const [groceryItems, setGroceryItems] = useState([]);
   const [isModalVisible, setModalVisible] = useState(false);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(""); // State để lưu thông báo lỗi
-  const [url, setUrl] = useState(""); // State để lưu URL người dùng nhập vào
+  const [url, setUrl] = useState(""); // URL nhập vào API
   const [importModalVisible, setImportModalVisible] = useState(false); // Modal cho nhập URL API
-  const db = useSQLiteContext();
-
-  // Fetch data từ SQLite khi load
-  const fetchData = async () => {
-    const result = await db.getAllAsync("SELECT * FROM grocery_items");
-    setGroceryItems(result); // Cập nhật danh sách món hàng từ SQLite
-  };
-
-  useEffect(() => {
-    fetchData(); // Gọi khi component load lần đầu
-  }, []);
+  const {
+    groceryItems,
+    loading,
+    error,
+    addItem,
+    toggleBought,
+    updateItem,
+    deleteItem,
+    importFromAPI,
+    searchItems,
+  } = useGroceryItems(); // Sử dụng custom hook
 
   const handleAddItem = async (
     name: string,
     quantity: string,
     category: string
   ) => {
-    if (!name.trim()) {
-      alert("Tên món không được để trống");
-      return;
-    }
-
-    await db.runAsync(
-      `INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, ?, ?)`,
-      [name, quantity, category, 0, Date.now()]
-    );
-    fetchData();
+    await addItem(name, quantity, category); // Thêm món
     setModalVisible(false);
-  };
-
-  const handleToggleBought = async (id: number) => {
-    const item = groceryItems.find((item) => item.id === id);
-    if (!item) return;
-
-    const newBoughtState = item.bought === 1 ? 0 : 1;
-    await db.runAsync(`UPDATE grocery_items SET bought = ? WHERE id = ?`, [
-      newBoughtState,
-      id,
-    ]);
-    fetchData();
   };
 
   const handleEditItem = (id: number) => {
@@ -79,59 +55,22 @@ const Page = () => {
     quantity: string,
     category: string
   ) => {
-    if (!name.trim()) {
-      alert("Tên món không được để trống");
-      return;
-    }
-
-    await db.runAsync(
-      `UPDATE grocery_items SET name = ?, quantity = ?, category = ? WHERE id = ?`,
-      [name, quantity, category, currentItem.id]
-    );
-    fetchData();
+    await updateItem(currentItem.id, name, quantity, category); // Cập nhật món
     setEditModalVisible(false);
     setCurrentItem(null);
   };
 
   const handleDeleteItem = async (id: number) => {
-    await db.runAsync(`DELETE FROM grocery_items WHERE id = ?`, [id]);
-    fetchData(); // Refresh danh sách sau khi xóa
+    await deleteItem(id); // Xóa món
   };
 
-  // Hàm Import từ API
-  const handleImportFromAPI = async () => {
-    setLoading(true);
-    setError(""); // Reset lỗi trước khi gọi API
+  const handleImportFromAPI = () => {
+    importFromAPI(url); // Import từ API
+    setImportModalVisible(false);
+  };
 
-    try {
-      const response = await fetch(url); // Lấy URL người dùng nhập vào
-      if (!response.ok) {
-        throw new Error("Lỗi khi tải dữ liệu");
-      }
-      const data = await response.json();
-
-      // Lọc và thêm dữ liệu từ API vào SQLite
-      for (const item of data) {
-        const { name, quantity, category, completed } = item;
-        const bought = completed ? 1 : 0;
-
-        // Kiểm tra nếu item đã có trong cơ sở dữ liệu
-        const existingItem = groceryItems.find((i) => i.name === name);
-        if (!existingItem) {
-          await db.runAsync(
-            `INSERT INTO grocery_items (name, quantity, category, bought, created_at) VALUES (?, ?, ?, ?, ?)`,
-            [name, quantity, category, bought, Date.now()]
-          );
-        }
-      }
-
-      fetchData(); // Refresh danh sách sau khi import
-      setImportModalVisible(false); // Đóng modal sau khi hoàn tất
-    } catch (err) {
-      setError("Không thể tải dữ liệu từ API.");
-    } finally {
-      setLoading(false);
-    }
+  const handleSearch = (searchTerm: string) => {
+    searchItems(searchTerm); // Tìm kiếm món hàng
   };
 
   return (
@@ -186,28 +125,22 @@ const Page = () => {
       {/* Hiển thị lỗi nếu fetch thất bại */}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      {groceryItems.length === 0 ? (
-        <Text style={styles.emptyStateText}>
-          Danh sách trống, thêm món cần mua nhé!
-        </Text>
-      ) : (
-        <FlatList
-          data={groceryItems}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <GroceryItem
-              id={item.id}
-              name={item.name}
-              quantity={item.quantity}
-              category={item.category}
-              bought={item.bought}
-              onToggleBought={handleToggleBought}
-              onEdit={handleEditItem}
-              onDelete={handleDeleteItem} // Truyền hàm xóa vào
-            />
-          )}
-        />
-      )}
+      <FlatList
+        data={groceryItems}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <GroceryItem
+            id={item.id}
+            name={item.name}
+            quantity={item.quantity}
+            category={item.category}
+            bought={item.bought}
+            onToggleBought={toggleBought}
+            onEdit={handleEditItem}
+            onDelete={handleDeleteItem}
+          />
+        )}
+      />
 
       <FAB
         icon="plus"
@@ -223,15 +156,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-  },
-  emptyStateText: {
-    textAlign: "center",
-    fontSize: 18,
-  },
-  errorText: {
-    color: "red",
-    textAlign: "center",
-    fontSize: 16,
   },
   modalOverlay: {
     flex: 1,
@@ -258,6 +182,11 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
     borderRadius: 5,
+  },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    fontSize: 16,
   },
   fab: {
     position: "absolute",
